@@ -6,13 +6,13 @@ import Music
 
 cogs = [Music]
 
-client = commands.Bot(command_prefix="-m", Intents = discord.Intents.all())
+client = commands.Bot(command_prefix="`", Intents = discord.Intents.all())
 
 for i in range(len(cogs)):
     cogs[i].setup(client)
 
-# Ur
-# client.run("")
+
+client.run("TOKEN")
 
 
 
