@@ -1,9 +1,13 @@
 import discord
 from discord.channel import VoiceChannel
 from discord.ext import commands
+from discord.ext import tasks
 from discord.player import FFmpegAudio
 import youtube_dl
 
+
+queue = []
+loop = False
 
 class Music(commands.Cog):
     def __init__(self, client):
@@ -89,6 +93,33 @@ class Music(commands.Cog):
     async def resume(self, ctx):
         await ctx.send("Resume ⏯")
         await ctx.voice_client.resume()
+
+    
+    # -----------| Loop |-----------
+    
+    @commands.command()
+    async def loop(self, ctx):
+        global loop
+
+        if loop:
+            await ctx.send('Loop mode is now `False!`')
+            loop = False
+        
+        else: 
+            await ctx.send('Loop mode is now `True!`')
+            loop = True
+        
+        # tasks.loop()
+
+
+    # -----------| Queue |-----------
+    
+    # @commands.command()
+    # async def queue(self, ctx):
+    #     global queue
+
+    #     queue.append()
+    #     await ctx.send(f'`{url}` added to queue!')
 
 
 
