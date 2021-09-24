@@ -101,6 +101,10 @@ async def credits(ctx):
     await ctx.send('Made by AcilRestu12')
 
 
+
+# -----------------------------------------------------------------------------
+
+
 @client.command(name='join')
 async def join(ctx):
     if not ctx.message.author.voice:
@@ -112,24 +116,40 @@ async def join(ctx):
     await channel.connect()
     
 
+# -----------| Play |-----------
 
 @client.command(name='play', help='This command plays a song')
-async def play(ctx):
+async def play(ctx, url):
     global queue
 
-    server = ctx.message.guild
-    voice_channel = server.voice_client
+
+    queue.append(url)
 
     async with ctx.typing():
-        player = await YTDLSource.from_url(queue[0], loop=client.loop)
-        voice_channel.play(player, after=lambda e : print('Player error : %s' %e) if e else None)
+        for i in queue:
+            print(f'\n\n Play : \n {i} \n')
+            server = ctx.message.guild
+            voice_channel = server.voice_client
+            player = await YTDLSource.from_url(i, loop=client.loop)
+            voice_channel.play(player, after=lambda e : print('Player error : %s' %e) if e else None)
+            
+            await ctx.send('**Now playing🎵 : ** {}'.format(player.title))
 
-        if loop:
-            queue.append(queue[0])
-        
-        del(queue[0])
-    
-    await ctx.send('**Now playing:** {}'.format(player.title))
+            if not loop:
+                print(f'\n\n Delete : \n {i} \n')
+                del(i)
+            elif loop:
+                print(f'\n\n Looping : \n {i} \n')
+
+                while loop:
+                    print(f'\n\n Loop play: \n {i} \n')
+                    server = ctx.message.guild
+                    voice_channel = server.voice_client
+                    player = await YTDLSource.from_url(i, loop=client.loop)
+                    voice_channel.play(player, after=lambda e : print('Player error : %s' %e) if e else None)
+
+                    await ctx.send('**Now playing:** {}'.format(player.title))
+
    
 
 
