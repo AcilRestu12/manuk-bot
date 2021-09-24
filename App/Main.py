@@ -58,6 +58,8 @@ class YTDLSource(discord.PCMVolumeTransformer):
 client = commands.Bot(command_prefix="`", Intents = discord.Intents.all())
 
 status = ['Jamming out to music!', 'Eating', 'Sleeping!']
+queue = []
+loop = False
 
 
 @client.event
@@ -99,8 +101,8 @@ async def credits(ctx):
     await ctx.send('Made by AcilRestu12')
 
 
-@client.command(name='play', help='This command plays a song')
-async def play(ctx, url):
+@client.command(name='join')
+async def join(ctx):
     if not ctx.message.author.voice:
         await ctx.send('You are not connected to a voice channel')
         return
@@ -108,30 +110,106 @@ async def play(ctx, url):
         channel = ctx.message.author.voice.channel
 
     await channel.connect()
+    
+
+
+@client.command(name='play', help='This command plays a song')
+async def play(ctx):
+    global queue
 
     server = ctx.message.guild
     voice_channel = server.voice_client
 
     async with ctx.typing():
-        player = await YTDLSource.from_url(url, loop=client.loop)
+        player = await YTDLSource.from_url(queue[0], loop=client.loop)
         voice_channel.play(player, after=lambda e : print('Player error : %s' %e) if e else None)
+
+        if loop:
+            queue.append(queue[0])
+        
+        del(queue[0])
     
-    await ctx.send('**Now playing:** {player.title}')
+    await ctx.send('**Now playing:** {}'.format(player.title))
+   
 
 
+@client.command(name='pause', help='This command pauses the song')
+async def pause(ctx):
+    server = ctx.message.guild
+    voice_channel = server.voice_client
 
-@client.command(name='stop', help='This command stops the song and makes the bot leave the voice channel')
+    voice_channel.pause()
+    await ctx.send('Pause⏸')
+
+
+@client.command(name='resume', help='This command resumes the song')
+async def resume(ctx):
+    server = ctx.message.guild
+    voice_channel = server.voice_client
+
+    voice_channel.resume()
+    await ctx.send('Resume⏯')
+
+
+@client.command(name='stop', help='This command stops the song')
 async def stop(ctx):
+    server = ctx.message.guild
+    voice_channel = server.voice_client
+
+    voice_channel.stop()
+    await ctx.send('Stop⏹')
+
+
+@client.command(name='leave', help='This command stops the song and makes the bot leave the voice channel')
+async def leave(ctx):
     voice_client = ctx.message.guild.voice_client
     await voice_client.disconnect()
+    await ctx.send('Adios👋')
+
+
+
+@client.command(name='queue')
+async def queue_(ctx, url):
+    global queue
+
+    queue.append(url)
+    await ctx.send(f'`{url}` added to queue!')
+
+
+@client.command(name='remove')
+async def remove(ctx, number):
+    global queue
+
+    try:
+        del(queue[int(number)])
+        await ctx.send(f'Your queue is now `{queue}!`')
+
+    except:
+        await ctx.send('Your queue is either **empty** or the index is **out of range**')
+
+
+@client.command(name='view', hellp="This command shows the queue")
+async def view(ctx):
+    await ctx.send(f'Your queue is now `{queue}!`')
+
+
+@client.command(name='loop', help='This command toggles loop mode')
+async def loop_(ctx):
+    global loop
+
+    if loop:
+        await ctx.send('Loop mode is now `False`')
+        loop = False
+
+    else:
+        await ctx.send('Loop mode is now `True`')
+        loop = True
+    
 
 
 
 
 
-
-
-
-client.run("Token")
+client.run("ODkwMjQ2NDAyMDY2NzYzODA2.YUtAkg.jUmFetIJBVGtMrqFSqZOVml7WMs")
 
 
