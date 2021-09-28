@@ -10,7 +10,7 @@ from random import choice
 # import Music
 
 
-token = "ODkyMzA0Mzc5NjQ5MDg5NTY2.YVK9Ng.PMRcArpN8b3cVv0OlfwqMTZzlkE"
+token = ""
 
 
 youtube_dl.utils.bug_reports_message = lambda: ''
