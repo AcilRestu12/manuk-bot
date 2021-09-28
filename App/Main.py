@@ -248,5 +248,5 @@ async def loop_(ctx):
 
 
 
-client.run("ODkwMjQ2NDAyMDY2NzYzODA2.YUtAkg.odlXIE-tb4Ib5l1-7e3tOlsey9U")
+client.run("Token")
 
