@@ -3,6 +3,7 @@ import discord
 from discord import channel
 from discord.channel import VoiceChannel
 from discord.ext import commands, tasks
+from discord.ext.commands.core import is_nsfw
 from discord.player import FFmpegAudio
 import youtube_dl
 from random import choice
@@ -124,33 +125,50 @@ async def play(ctx, url):
 
 
     queue.append(url)
+    server = ctx.message.guild
+
+    voice_channel = server.voice_client
 
     async with ctx.typing():
+        player = await YTDLSource.from_url(url, loop=client.loop)
+        voice_channel.play(player, after=lambda e : print('Player error : %s' %e) if e else None)
+        tasks.Loop.get_task(self=url)
+
+        if tasks.Loop.is_running():
+            print("Loop")
+
+        
         for i in queue:
-            print(f'\n\n Play : \n {i} \n')
-            server = ctx.message.guild
-            voice_channel = server.voice_client
-            player = await YTDLSource.from_url(i, loop=client.loop)
-            voice_channel.play(player, after=lambda e : print('Player error : %s' %e) if e else None)
-            
-            await ctx.send('**Now playing🎵 : ** {}'.format(player.title))
+            if not voice_channel.is_playing():
+                print(f'\n\n Play : \n {i} \n')
+                player = await YTDLSource.from_url(i, loop=client.loop)
+                voice_channel.play(player, after=lambda e : print('Player error : %s' %e) if e else None)
+                
+                await ctx.send('**Now playing🎵 : ** {}'.format(player.title))
+                if not loop:
+                    print(f'\n\n Delete : \n {i} \n')
+                    del(i)
+                elif loop:
+                    print(f'\n\n Looping : \n {i} \n')
 
-            if not loop:
-                print(f'\n\n Delete : \n {i} \n')
-                del(i)
-            elif loop:
-                print(f'\n\n Looping : \n {i} \n')
+                    while loop:
+                        print(f'\n\n Loop play: \n {i} \n')
+                        server = ctx.message.guild
+                        voice_channel = server.voice_client
+                        player = await YTDLSource.from_url(i, loop=client.loop)
+                        voice_channel.play(player, after=lambda e : print('Player error : %s' %e) if e else None)
 
-                while loop:
-                    print(f'\n\n Loop play: \n {i} \n')
-                    server = ctx.message.guild
-                    voice_channel = server.voice_client
-                    player = await YTDLSource.from_url(i, loop=client.loop)
-                    voice_channel.play(player, after=lambda e : print('Player error : %s' %e) if e else None)
+                        await ctx.send('**Now playing:** {}'.format(player.title))
+            if voice_channel.is_playing():
+                
+                print(f'\n\n Play : \n {i} \n')
+                player = await YTDLSource.from_url(i, loop=client.loop)
+                voice_channel.play(player, after=lambda e : print('Player error : %s' %e) if e else None)
+        
+        if voice_channel.is_playing():
+            print('**Now playing:** {}'.format(player.title))
+            print('**End Time:** {}'.format(player.time))
 
-                    await ctx.send('**Now playing:** {}'.format(player.title))
-
-   
 
 
 @client.command(name='pause', help='This command pauses the song')
@@ -230,6 +248,5 @@ async def loop_(ctx):
 
 
 
-client.run("Token")
-
+client.run("ODkwMjQ2NDAyMDY2NzYzODA2.YUtAkg.odlXIE-tb4Ib5l1-7e3tOlsey9U")
 
