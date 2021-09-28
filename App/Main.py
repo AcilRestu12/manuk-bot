@@ -10,7 +10,6 @@ from random import choice
 # import Music
 
 
-token = ""
 
 
 youtube_dl.utils.bug_reports_message = lambda: ''
@@ -271,5 +270,5 @@ async def loop_(ctx):
 
 
 
-client.run(token)
+client.run('token')
 
