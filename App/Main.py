@@ -10,6 +10,9 @@ from random import choice
 # import Music
 
 
+token = "ODkyMzA0Mzc5NjQ5MDg5NTY2.YVK9Ng.PMRcArpN8b3cVv0OlfwqMTZzlkE"
+
+
 youtube_dl.utils.bug_reports_message = lambda: ''
 
 ytdl_format_options = {
@@ -41,6 +44,10 @@ class YTDLSource(discord.PCMVolumeTransformer):
 
         self.title = data.get('title')
         self.url = data.get('url')
+        self.id = data.get('id')
+        self.duration = data.get('duration')
+
+        self.source = data.get('source')
 
     @classmethod
     async def from_url(cls, url, *, loop=None, stream=False):
@@ -62,40 +69,37 @@ status = ['Jamming out to music!', 'Eating', 'Sleeping!']
 queue = []
 loop = False
 
+players = {}
+queues = {}
+
 
 @client.event
 async def on_ready():
     change_status.start()
     print("Bot is online!")
 
-
 @client.event
 async def on_member_join(member):
     channel = discord.utils.get(member.guild.channels, name='general')
     await channel.send(f'Welcome {member.mention}!  Ready to jam out? See `?help` command for details!')
-    
 
 @tasks.loop(seconds=20)
 async def change_status():
     await client.change_presence(activity=discord.Game(choice(status)))
 
-
 @client.command(name='ping', help='This command return the latency')
 async def ping(ctx):
     await ctx.send(f'**Pong!** Latency : {round(client.latency * 1000)}, ms')
-
 
 @client.command(name='hello', help='This command returns a random welcome message')
 async def hello(ctx):
     respones = ['**grumble** Why did you wake me up?', 'Top of the morning to you lad!', 'Hello, how are you?', 'Hi', '**Yoo Wassuup!**']
     await ctx.send(choice(respones))
 
-
 @client.command(name='die', help='This command returns a random last words')
 async def die(ctx):
     respones = ['Why you brought my short life to an end', 'I could have done so much more', 'I have a family, kill them instead', '**Bye**', '**Adios**']
     await ctx.send(choice(respones))
-
 
 @client.command(name='credits', help='This command returns the credits')
 async def credits(ctx):
@@ -119,56 +123,84 @@ async def join(ctx):
 
 # -----------| Play |-----------
 
-@client.command(name='play', help='This command plays a song')
+# @client.command(name='play', help='This command plays music')
+# async def play(ctx, url):
+#     if not ctx.message.author.voice:
+#         await ctx.send("You are not connected to a voice channel")
+#         return
+
+#     else:
+#         channel = ctx.message.author.voice.channel
+#         await channel.connect()
+
+#     server = ctx.message.guild
+#     voice_channel = server.voice_client
+
+#     async with ctx.typing():
+#         player = await YTDLSource.from_url(url, loop=client.loop)
+#         voice_channel.play(player, after=lambda e: print('Player error: %s' % e) if e else None)
+
+#     print("\n\n{} \n".format(server.id))
+#     await ctx.send('**Now playing:** {}'.format(player.title))
+#     print("\n\n{} \nDuration : {}\n".format(player.id, player.duration))
+
+
+@client.command(name='play', help='This command plays a song', pass_context=True)
 async def play(ctx, url):
-    global queue
-
-
-    queue.append(url)
     server = ctx.message.guild
+    voice_client = server.voice_client
+    source = await YTDLSource.from_url(url, loop=client.loop)
+    player = voice_client.play(source, after=lambda: check_queue(source.id))
+    players[source.id] = player
+    print("\n\nid : {}".format(source.id))
+    print("\nsource : {}".format(source.source))
+    await ctx.send('**Now playing:** {}'.format(source.title))
+    print("\n\n{} \nDuration : {}\n".format(source.id, source.duration))
 
-    voice_channel = server.voice_client
 
-    async with ctx.typing():
-        player = await YTDLSource.from_url(url, loop=client.loop)
-        voice_channel.play(player, after=lambda e : print('Player error : %s' %e) if e else None)
-        tasks.Loop.get_task(self=url)
+def check_queue(id):
+    if queues[id] != []:
+        player = queues[id].pop(0)
+        players[id] = player
 
-        if tasks.Loop.is_running():
-            print("Loop")
 
-        
-        for i in queue:
-            if not voice_channel.is_playing():
-                print(f'\n\n Play : \n {i} \n')
-                player = await YTDLSource.from_url(i, loop=client.loop)
-                voice_channel.play(player, after=lambda e : print('Player error : %s' %e) if e else None)
-                
-                await ctx.send('**Now playing🎵 : ** {}'.format(player.title))
-                if not loop:
-                    print(f'\n\n Delete : \n {i} \n')
-                    del(i)
-                elif loop:
-                    print(f'\n\n Looping : \n {i} \n')
+@client.command(name='queue', pass_context=True)
+async def queue(ctx, url):
+    server = ctx.message.guild
+    voice_client = server.voice_client
+    source = await YTDLSource.from_url(url, loop=client.loop)
+    if not voice_client.is_playing():
+        player = voice_client.play(discord.FFmpegPCMAudio(source), after=lambda: check_queue(source.id))
+        await ctx.send('**Now playing:** {}'.format(source.title))
+        print('\n {} \n'.format(voice_client.source.__dict__))
+        print('\n\n {} \n'.format(voice_client.source.url))
+        print("\n\n{} \nDuration : {}\n".format(source.id, source.duration))
 
-                    while loop:
-                        print(f'\n\n Loop play: \n {i} \n')
-                        server = ctx.message.guild
-                        voice_channel = server.voice_client
-                        player = await YTDLSource.from_url(i, loop=client.loop)
-                        voice_channel.play(player, after=lambda e : print('Player error : %s' %e) if e else None)
+    if source.id in queues:
+        queues[source.id].append(player)
+    else:
+        queues[source.id] = [player]
+    await ctx.send('Video queued.')
+    print('{}, duration : {} has been queued'.format(source.id, source.duration))
 
-                        await ctx.send('**Now playing:** {}'.format(player.title))
-            if voice_channel.is_playing():
-                
-                print(f'\n\n Play : \n {i} \n')
-                player = await YTDLSource.from_url(i, loop=client.loop)
-                voice_channel.play(player, after=lambda e : print('Player error : %s' %e) if e else None)
-        
-        if voice_channel.is_playing():
-            print('**Now playing:** {}'.format(player.title))
-            print('**End Time:** {}'.format(player.time))
+    '''
+    FFMPEG_OPTIONS = {'before_options':'-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5', 'options':'-vn'}
+    YDL_OPTIONS = {'format':"bestaudio"}
+    vc = ctx.voice_client
 
+    with youtube_dl.YoutubeDL(YDL_OPTIONS) as ydl:
+        info = ydl.extract_info(url, download=False)
+        url2 = info['formats'][0]['url']
+        source = await discord.FFmpegOpusAudio.from_probe(url2, **FFMPEG_OPTIONS)
+        vc.play(source)
+    '''    
+
+# @client.command(name='queue')
+# async def queue_(ctx, url):
+#     global queue
+
+#     queue.append(url)
+#     await ctx.send(f'`{url}` added to queue!')
 
 
 @client.command(name='pause', help='This command pauses the song')
@@ -179,7 +211,6 @@ async def pause(ctx):
     voice_channel.pause()
     await ctx.send('Pause⏸')
 
-
 @client.command(name='resume', help='This command resumes the song')
 async def resume(ctx):
     server = ctx.message.guild
@@ -187,7 +218,6 @@ async def resume(ctx):
 
     voice_channel.resume()
     await ctx.send('Resume⏯')
-
 
 @client.command(name='stop', help='This command stops the song')
 async def stop(ctx):
@@ -197,7 +227,6 @@ async def stop(ctx):
     voice_channel.stop()
     await ctx.send('Stop⏹')
 
-
 @client.command(name='leave', help='This command stops the song and makes the bot leave the voice channel')
 async def leave(ctx):
     voice_client = ctx.message.guild.voice_client
@@ -206,29 +235,23 @@ async def leave(ctx):
 
 
 
-@client.command(name='queue')
-async def queue_(ctx, url):
-    global queue
-
-    queue.append(url)
-    await ctx.send(f'`{url}` added to queue!')
 
 
-@client.command(name='remove')
-async def remove(ctx, number):
-    global queue
+# @client.command(name='remove')
+# async def remove(ctx, number):
+#     global queue
 
-    try:
-        del(queue[int(number)])
-        await ctx.send(f'Your queue is now `{queue}!`')
+#     try:
+#         del(queue[int(number)])
+#         await ctx.send(f'Your queue is now `{queue}!`')
 
-    except:
-        await ctx.send('Your queue is either **empty** or the index is **out of range**')
+#     except:
+#         await ctx.send('Your queue is either **empty** or the index is **out of range**')
 
 
-@client.command(name='view', hellp="This command shows the queue")
-async def view(ctx):
-    await ctx.send(f'Your queue is now `{queue}!`')
+# @client.command(name='view', hellp="This command shows the queue")
+# async def view(ctx):
+#     await ctx.send(f'Your queue is now `{queue}!`')
 
 
 @client.command(name='loop', help='This command toggles loop mode')
@@ -248,5 +271,5 @@ async def loop_(ctx):
 
 
 
-client.run("Token")
+client.run(token)
 
